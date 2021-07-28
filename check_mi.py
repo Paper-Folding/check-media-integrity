@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import warnings
 from queue import Empty
-from multiprocessing import Pool, Queue, Process
+from multiprocessing import Queue, Process
 
 __author__ = "Fabiano Tarlao"
 __copyright__ = "Copyright 2018, Fabiano Tarlao"
 __credits__ = ["Fabiano Tarlao"]
 __license__ = "GPL3"
-__version__ = "0.9.4"
+__version__ = "0.9.5"
 __maintainer__ = "Fabiano Tarlao"
-__status__ = "Beta"
+__status__ = "Mystery"
 
 import sys
 import os
@@ -18,11 +17,11 @@ import time
 import PIL
 from PIL import Image as ImageP
 from wand.image import Image as ImageW
-import PyPDF2
 import csv
 import ffmpeg
 import argparse
 from subprocess import Popen, PIPE
+import textwrap as _textwrap
 
 LICENSE = "Copyright (C) 2018  Fabiano Tarlao.\nThis program comes with ABSOLUTELY NO WARRANTY.\n" \
           "This is free software, and you are welcome to redistribute it under GPL3 license conditions"
@@ -39,8 +38,6 @@ PIL_EXTRA_EXTENSIONS = ['eps', 'ico', 'im', 'pcx', 'ppm', 'sgi', 'spider', 'xbm'
 
 MAGICK_EXTENSIONS = ['psd', 'xcf']
 
-PDF_EXTENSIONS = ['pdf']
-
 # this ones are managed by libav or ffmpeg
 VIDEO_EXTENSIONS = ['avi', 'mp4', 'mov', 'mpeg', 'mpg', 'm2p', 'mkv', '3gp', 'ogg', 'flv', 'f4v', 'f4p', 'f4a', 'f4b']
 AUDIO_EXTENSIONS = ['mp3', 'mp2']
@@ -48,8 +45,6 @@ AUDIO_EXTENSIONS = ['mp3', 'mp2']
 MEDIA_EXTENSIONS = []
 
 CONFIG = None
-
-import textwrap as _textwrap
 
 
 class MultilineFormatter(argparse.HelpFormatter):
@@ -66,15 +61,13 @@ class MultilineFormatter(argparse.HelpFormatter):
 
 def arg_parser():
     epilog_details = """- single file check ignores options -i,-m,-p,-e,-c,-t|n
-    - strict_level: execution speed for level 0 > level 1 > level 2. Level 0 algorithm has low recall 
-    and high precision, 1 has higher recall, 2 has the highest recall but could have more false positives|n 
+    - strict_level: execution speed for level 0 > level 1 > level 2. Level 0 algorithm has low recall and high precision, 1 has higher recall, 2 has the highest recall but could have more false positives|n
     - with \'err_detect\' option you can provide the 'strict' shortcut or the flags supported by ffmpeg, e.g.:
     crccheck, bitstream, buffer, explode, or their combination, e.g., +buffer+bitstream|n
     - supported image formats/extensions: """ + str(PIL_EXTENSIONS) + """|n
     - supported image EXTRA formats/extensions:""" + str(PIL_EXTRA_EXTENSIONS + MAGICK_EXTENSIONS) + """|n
     - supported audio/video extensions: """ + str(VIDEO_EXTENSIONS + AUDIO_EXTENSIONS) + """|n
-    - output CSV file, has the header raw, and one line for each bad file, providing: file name, error message, 
-    file size"""
+    - output CSV file, has the header raw, and one line for each bad file, providing: file name, error message, file size"""
 
     parser = argparse.ArgumentParser(description='Checks integrity of Media files (Images, Video, Audio).',
                                      epilog=epilog_details, formatter_class=MultilineFormatter)
@@ -94,8 +87,6 @@ def arg_parser():
                         dest='is_disable_image')
     parser.add_argument('-m', '--enable-media', action='store_true', help='enable check for audio/video files',
                         dest='is_enable_media')
-    parser.add_argument('-p', '--disable-pdf', action='store_true', help='ignore pdf files',
-                        dest='is_disable_pdf')
     parser.add_argument('-e', '--disable-extra', action='store_true', help='ignore extra image extensions '
                                                                            '(psd, xcf,. and rare ones)',
                         dest='is_disable_extra')
@@ -127,7 +118,6 @@ def setup(configuration):
     enable_extra = not configuration.is_disable_extra
     enable_images = not configuration.is_disable_image
     enable_media = configuration.is_enable_media
-    enable_pdf = not configuration.is_disable_pdf
 
     if enable_extra:
         PIL_EXTENSIONS.extend(PIL_EXTRA_EXTENSIONS)
@@ -136,9 +126,6 @@ def setup(configuration):
         MEDIA_EXTENSIONS += PIL_EXTENSIONS
         if enable_extra:
             MEDIA_EXTENSIONS += MAGICK_EXTENSIONS
-
-    if enable_pdf:
-        MEDIA_EXTENSIONS += PDF_EXTENSIONS
 
     if enable_media:
         MEDIA_EXTENSIONS += VIDEO_EXTENSIONS + AUDIO_EXTENSIONS
@@ -156,7 +143,7 @@ def pil_check(filename):
     # f = io.BytesIO()
     # img.save(f, "BMP")
     # f.close()
-    img.transpose(PIL.Image.FLIP_LEFT_RIGHT)
+    img.transpose(PIL.Image.Transpose.FLIP_LEFT_RIGHT)
     img.close()
 
 
@@ -179,15 +166,6 @@ def magick_identify_check(filename):
     if exitcode != 0:
         raise Exception('Identify error:' + str(exitcode))
     return out
-
-
-def pypdf_check(filename):
-    # PDF format
-    # Check with specific library
-    pdfobj = PyPDF2.PdfFileReader(open(filename, "rb"))
-    pdfobj.getDocumentInfo()
-    # Check with imagemagick
-    magick_check(filename, False)
 
 
 def check_zeros(filename, length_seq_threshold=None):
@@ -279,8 +257,8 @@ class TimedLogger:
             speed_IS = num_files / from_start_delta
             processed_size_MB = float(total_file_size) / (1024 * 1024)
 
-            print("Number of bad/processed files:", num_bad_files, "/", num_files, ", size of processed files:", \
-                "{0:0.1f}".format(processed_size_MB), "MB")
+            print("Number of bad/processed files:", num_bad_files, "/", num_files, ", size of processed files:",
+                  "{0:0.1f}".format(processed_size_MB), "MB")
             print("Processing speed:", "{0:0.1f}".format(speed_MB), "MB/s, or", "{0:0.1f}".format(
                 speed_IS), "files/s")
 
@@ -306,12 +284,6 @@ def check_file(filename, error_detect='default', strict_level=0, zero_detect=0, 
         if file_ext in PIL_EXTENSIONS:
             if strict_level in [1, 2]:
                 pil_check(filename)
-            if strict_level in [0, 2]:
-                magick_identify_check(filename)
-
-        if file_ext in PDF_EXTENSIONS:
-            if strict_level in [1, 2]:
-                pypdf_check(filename)
             if strict_level in [0, 2]:
                 magick_identify_check(filename)
 
@@ -393,11 +365,18 @@ def main():
     pre_count = 0
 
     for root, sub_dirs, files in os.walk(check_path):
-        
         media_files = []
         for filename in files:
             if is_target_file(filename):
                 media_files.append(filename)
+        # thumb check
+        thumb = root + os.sep + '.thumb'
+        if os.path.exists(thumb):
+            try:
+                pil_check(thumb)
+            except Exception:
+                print('Removing thumbnail: ' + thumb)
+                os.remove(thumb)
 
         pre_count += len(media_files)
 
