@@ -12,10 +12,12 @@ __maintainer__ = "Fabiano Tarlao"
 __status__ = "Mystery"
 
 import sys
+import warnings
 import os
 import time
 import PIL
 from PIL import Image as ImageP
+from wand.exceptions import CorruptImageError
 from wand.image import Image as ImageW
 import csv
 import ffmpeg
@@ -45,6 +47,8 @@ AUDIO_EXTENSIONS = ['mp3', 'mp2']
 MEDIA_EXTENSIONS = []
 
 CONFIG = None
+
+warnings.filterwarnings("error")  # catch warnings
 
 
 class MultilineFormatter(argparse.HelpFormatter):
@@ -149,13 +153,16 @@ def pil_check(filename):
 
 def magick_check(filename, flip=True):
     # very useful for xcf, psd and aslo supports pdf
-    img = ImageW(filename=filename)
-    if flip:
-        temp = img.flip
-    else:
-        temp = img.make_blob(format='bmp')
-    img.close()
-    return temp
+    try:
+        img = ImageW(filename=filename)
+        if flip:
+            temp = img.flip
+        else:
+            temp = img.make_blob(format='bmp')
+        img.close()
+        return temp
+    except Warning as w:
+        raise CorruptImageError(str(w))
 
 
 def magick_identify_check(filename):
