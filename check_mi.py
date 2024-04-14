@@ -159,7 +159,7 @@ def magick_check(filename, flip=True):
 
 
 def magick_identify_check(filename):
-    proc = Popen(['identify', '-regard-warnings', filename], stdout=PIPE,
+    proc = Popen(['magick', 'identify', '-regard-warnings', filename], stdout=PIPE,
                  stderr=PIPE)  # '-verbose',
     out, err = proc.communicate()
     exitcode = proc.returncode
