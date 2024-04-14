@@ -46,11 +46,6 @@ optional arguments:
   -x E, --err-detect E  Execute ffmpeg decoding with a specific err_detect
                         flag E, 'strict' is shortcut for
                         +crccheck+bitstream+buffer+explode
-  -l L, --strict_level L
-                        Uses different apporach for checking images depending
-                        on L integer value. Accepted values 0,1 (default),2: 0
-                        ImageMagick idenitfy, 1 Pillow library+ImageMagick, 2
-                        applies both 0+1 checks
   -t T, --threads T     number of parallel threads used for speedup, default
                         is one. Single file execution does not take advantage
                         of the thread option
