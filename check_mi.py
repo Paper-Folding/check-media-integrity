@@ -65,7 +65,6 @@ class MultilineFormatter(argparse.HelpFormatter):
 
 def arg_parser():
     epilog_details = """- single file check ignores options -i,-m,-p,-e,-c,-t|n
-    - strict_level: execution speed for level 0 > level 1 > level 2. Level 0 algorithm has low recall and high precision, 1 has higher recall, 2 has the highest recall but could have more false positives|n
     - with \'err_detect\' option you can provide the 'strict' shortcut or the flags supported by ffmpeg, e.g.:
     crccheck, bitstream, buffer, explode, or their combination, e.g., +buffer+bitstream|n
     - supported image formats/extensions: """ + str(PIL_EXTENSIONS) + """|n
@@ -98,11 +97,6 @@ def arg_parser():
                         help='execute ffmpeg decoding with a specific err_detect flag %(metavar)s, \'strict\' is '
                              'shortcut for +crccheck+bitstream+buffer+explode',
                         dest='error_detect', default='default')
-    parser.add_argument('-l', '--strict_level', metavar='L', type=int,
-                        help='uses different apporach for checking images depending on %(metavar)s integer value. '
-                             'Accepted values 0,1 (default),2: 0 ImageMagick idenitfy, 1 Pillow library+ImageMagick, '
-                             '2 applies both 0+1 checks',
-                        dest='strict_level', default=1)
     parser.add_argument('-t', '--threads', metavar='T', type=int,
                         help='number of parallel threads used for speedup, default is one. Single file execution does'
                              'not take advantage of the thread option',
@@ -274,7 +268,7 @@ def is_pil_simd():
     return 'post' in PIL.__version__
 
 
-def check_file(filename, error_detect='default', strict_level=0, zero_detect=0, ffmpeg_threads=0):
+def check_file(filename, error_detect='default', zero_detect=0, ffmpeg_threads=0):
     if sys.version_info[0] < 3:
         filename = filename.decode('utf8')
 
@@ -289,16 +283,13 @@ def check_file(filename, error_detect='default', strict_level=0, zero_detect=0, 
             check_zeros(filename, CONFIG.zero_detect)
 
         if file_ext in PIL_EXTENSIONS:
-            if strict_level in [1, 2]:
-                pil_check(filename)
-            if strict_level in [0, 2]:
-                magick_identify_check(filename)
+            pil_check(filename)
+            magick_check(filename)
+            magick_identify_check(filename)
 
         if file_ext in MAGICK_EXTENSIONS:
-            if strict_level in [1, 2]:
-                magick_check(filename)
-            if strict_level in [0, 2]:
-                magick_identify_check(filename)
+            magick_check(filename)
+            magick_identify_check(filename)
 
         if file_ext in VIDEO_EXTENSIONS:
             ffmpeg_check(filename, error_detect=error_detect, threads=ffmpeg_threads)
@@ -322,7 +313,7 @@ def worker(in_queue, out_queue, CONFIG):
     try:
         while True:
             full_filename = in_queue.get(block=True, timeout=2)
-            is_success = check_file(full_filename, CONFIG.error_detect, strict_level=CONFIG.strict_level, zero_detect=CONFIG.zero_detect)
+            is_success = check_file(full_filename, CONFIG.error_detect, zero_detect=CONFIG.zero_detect)
             out_queue.put(is_success)
     except Empty:
         print("Closing parallel worker, the worker has no more tasks to perform")
