@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from queue import Empty
-from multiprocessing import Queue, Process
+from multiprocessing import Queue, Process, cpu_count
 
 __author__ = "Fabiano Tarlao"
 __copyright__ = "Copyright 2018, Fabiano Tarlao"
@@ -15,6 +15,7 @@ import sys
 import warnings
 import os
 import time
+from math import floor
 import PIL
 from PIL import Image as ImageP
 from wand.exceptions import CorruptImageError
@@ -98,9 +99,8 @@ def arg_parser():
                              'shortcut for +crccheck+bitstream+buffer+explode',
                         dest='error_detect', default='default')
     parser.add_argument('-t', '--threads', metavar='T', type=int,
-                        help='number of parallel threads used for speedup, default is one. Single file execution does'
-                             'not take advantage of the thread option',
-                        dest='threads', default=1)
+                        help='number of parallel threads used for speedup, default is (cpu_count / 2 + 1).',
+                        dest='threads', default=floor(cpu_count() / 2) + 1)
     parser.add_argument('-T', '--timeout', metavar='K', type=int,
                         help='number of seconds to wait for new performed checks in queue, default is 120 sec, you need'
                              ' to raise the default when working with video files (usually) bigger than few GBytes',
