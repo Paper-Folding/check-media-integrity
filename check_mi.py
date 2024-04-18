@@ -268,12 +268,24 @@ def is_pil_simd():
     return 'post' in PIL.__version__
 
 
-def check_file(filename, error_detect='default', zero_detect=0, ffmpeg_threads=0):
+def check_file(filename: str, nominate_file_extension: str = '', error_detect='default', zero_detect=0, ffmpeg_threads=0):
+    """check any media integrity
+
+    Args:
+        filename (str): file store path
+        nominate_file_extension (str, optional): file extension without dot. Defaults to ''.
+        error_detect (str, optional): _description_. Defaults to 'default'.
+        zero_detect (int, optional): _description_. Defaults to 0.
+        ffmpeg_threads (int, optional): _description_. Defaults to 0.
+
+    Returns:
+        _type_: _description_
+    """
     if sys.version_info[0] < 3:
         filename = filename.decode('utf8')
 
     file_lowercase = filename.lower()
-    file_ext = os.path.splitext(file_lowercase)[1][1:]
+    file_ext = nominate_file_extension if nominate_file_extension else os.path.splitext(file_lowercase)[1][1:]
 
     file_size = 'NA'
 
@@ -313,7 +325,7 @@ def worker(in_queue, out_queue, CONFIG):
     try:
         while True:
             full_filename = in_queue.get(block=True, timeout=2)
-            is_success = check_file(full_filename, CONFIG.error_detect, zero_detect=CONFIG.zero_detect)
+            is_success = check_file(full_filename, '', CONFIG.error_detect, zero_detect=CONFIG.zero_detect)
             out_queue.put(is_success)
     except Empty:
         print("Closing parallel worker, the worker has no more tasks to perform")
@@ -340,7 +352,7 @@ def main():
 
     if os.path.isfile(check_path):
         # manage single file check
-        is_success = check_file(check_path, CONFIG.error_detect)
+        is_success = check_file(check_path, '', CONFIG.error_detect)
         if not is_success[0]:
             check_outcome_detail = is_success[1]
             log_check_outcome(check_outcome_detail)
