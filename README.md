@@ -122,3 +122,16 @@ Download and install ImageMagick from https://imagemagick.org/script/download.ph
 test_damage.py is a funny experiment, it evaluates the probability of a random damage to be detected by this tool.
 That is the outcome is a bit below expectations, the damage has to be in vital parts, better to be a random noise or to be a file truncation.
 I think that the code is self explanatory.
+
+
+## Actual commands that test damage
+
+MAGICK:
+```sh
+magick identify -regard-warnings test_files\\050807-124755b.jpg
+```
+
+FFmpeg:  
+```sh
+ffmpeg -err_detect +crccheck+bitstream+buffer+explode -threads 0 -i test_files\\050807-124755b.jpg -f null pipe:
+```
