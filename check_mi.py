@@ -1,30 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from multiprocessing import Process, Queue, cpu_count
 from queue import Empty
-from multiprocessing import Queue, Process, cpu_count
 
-__author__ = "Fabiano Tarlao"
-__copyright__ = "Copyright 2018, Fabiano Tarlao"
-__credits__ = ["Fabiano Tarlao"]
+__author__ = "Paper Folding"
+__copyright__ = "Copyright 2025, Paper Folding"
+__credits__ = ["Fabiano Tarlao", "Paper Folding"]
 __license__ = "GPL3"
 __version__ = "0.9.5"
-__maintainer__ = "Fabiano Tarlao"
-__status__ = "Mystery"
+__maintainer__ = "Paper Folding"
+__status__ = "Stable"
 
-import sys
-import warnings
+import argparse
+import csv
 import os
+import sys
+import textwrap as _textwrap
 import time
+import warnings
 from math import floor
+from subprocess import PIPE, Popen
+
+import ffmpeg
 import PIL
 from PIL import Image as ImageP
 from wand.exceptions import CorruptImageError
 from wand.image import Image as ImageW
-import csv
-import ffmpeg
-import argparse
-from subprocess import Popen, PIPE
-import textwrap as _textwrap
 
 LICENSE = "Copyright (C) 2018  Fabiano Tarlao.\nThis program comes with ABSOLUTELY NO WARRANTY.\n" \
           "This is free software, and you are welcome to redistribute it under GPL3 license conditions"
@@ -147,6 +148,7 @@ def pil_check(filename):
 
 def magick_check(filename, flip=True):
     # very useful for xcf, psd and aslo supports pdf
+    warnings.filterwarnings("error")  # catch warnings
     try:
         img = ImageW(filename=filename)
         if flip:
@@ -157,6 +159,8 @@ def magick_check(filename, flip=True):
         return temp
     except Warning as w:
         raise CorruptImageError(str(w))
+    finally:
+        warnings.resetwarnings()
 
 
 def magick_identify_check(filename):
